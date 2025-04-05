@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const submitBtn = document.getElementById('submitBtn');
     const updateBtn = document.getElementById('updateBtn');
     const cancelBtn = document.getElementById('cancelBtn');
+    const shareQRBtn = document.getElementById('shareQRBtn');
     
     // Variables
     let records = JSON.parse(localStorage.getItem('maeRainhaRecords')) || [];
@@ -157,6 +158,112 @@ document.addEventListener('DOMContentLoaded', function() {
         showRecordDetails(id);
     }
     
+    // Generate QR code for a record
+    function generateQRCode(record) {
+        const qrcodeContainer = document.getElementById('qrcode-container');
+        qrcodeContainer.innerHTML = '';
+        
+        // Criar dados para o QR code (formato JSON)
+        const qrData = {
+            id: record.id,
+            host: record.host,
+            apartment: record.apartment,
+            block: record.block,
+            receiptDate: record.receiptDate,
+            deliveryDate: record.deliveryDate || '',
+            status: record.status
+        };
+        
+        // Gerar QR code
+        QRCode.toCanvas(qrcodeContainer, JSON.stringify(qrData), {
+            width: 180,
+            margin: 1,
+            color: {
+                dark: '#212529',  // Cor do QR code
+                light: '#ffffff'  // Fundo do QR code
+            }
+        }, function(error) {
+            if (error) {
+                console.error('Erro ao gerar QR code:', error);
+                qrcodeContainer.innerHTML = '<p class="text-danger">Erro ao gerar QR code</p>';
+            }
+        });
+        
+        // Configurar botão de compartilhamento
+        const shareQRBtn = document.getElementById('shareQRBtn');
+        if (shareQRBtn) {
+            shareQRBtn.onclick = function() {
+                shareQRCode(record);
+            };
+        }
+    }
+    
+    // Compartilhar QR code
+    function shareQRCode(record) {
+        const canvas = document.querySelector('#qrcode-container canvas');
+        if (!canvas) return;
+        
+        // Converter canvas para imagem base64
+        const imageData = canvas.toDataURL('image/png');
+        
+        // Criar texto de compartilhamento
+        const shareText = `Informações da Imagem Mãe Rainha:\n` +
+                         `Anfitrião: ${record.host}\n` +
+                         `Apartamento: ${record.apartment}\n` + 
+                         `Bloco: ${record.block}\n` +
+                         `Data de Recebimento: ${formatDate(record.receiptDate)}\n` +
+                         `Status: ${record.status}`;
+        
+        // Verificar se a API de compartilhamento está disponível
+        if (navigator.share) {
+            // Converter base64 para blob para compartilhamento
+            fetch(imageData)
+                .then(res => res.blob())
+                .then(blob => {
+                    const file = new File([blob], "qrcode.png", { type: "image/png" });
+                    navigator.share({
+                        title: 'QR Code Mãe Rainha',
+                        text: shareText,
+                        files: [file]
+                    }).catch(error => {
+                        console.log('Erro ao compartilhar:', error);
+                        // Fallback: abrir em nova janela para download
+                        window.open(imageData);
+                    });
+                });
+        } else {
+            // Fallback: abrir em nova janela para download
+            const newTab = window.open();
+            newTab.document.write(`
+                <html>
+                <head>
+                    <title>QR Code Mãe Rainha - ${record.host}</title>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <style>
+                        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+                        .container { max-width: 500px; margin: 0 auto; }
+                        .info { text-align: left; margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h2>QR Code Mãe Rainha</h2>
+                        <img src="${imageData}" alt="QR Code" style="max-width: 100%;">
+                        <div class="info">
+                            <p><strong>Anfitrião:</strong> ${record.host}</p>
+                            <p><strong>Apartamento:</strong> ${record.apartment}</p>
+                            <p><strong>Bloco:</strong> ${record.block}</p>
+                            <p><strong>Data de Recebimento:</strong> ${formatDate(record.receiptDate)}</p>
+                            <p><strong>Status:</strong> ${record.status}</p>
+                        </div>
+                        <p>Clique com o botão direito na imagem e selecione "Salvar imagem como..." para baixar o QR code.</p>
+                    </div>
+                </body>
+                </html>
+            `);
+        }
+    }
+    
     // Show record details in sidebar
     function showRecordDetails(id) {
         const record = records.find(r => r.id === id);
@@ -174,6 +281,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const statusElement = document.getElementById('detail-status');
             statusElement.textContent = record.status;
             statusElement.className = `badge ${record.status === 'Recebido' ? 'bg-success' : 'bg-warning'}`;
+            
+            // Generate QR code for this record
+            generateQRCode(record);
             
             // Show details and hide no selection message
             detailsContainer.classList.remove('d-none');
