@@ -74,12 +74,12 @@ document.addEventListener('DOMContentLoaded', function() {
             displayedRecords = records.filter(record => record.status === 'Recebido');
         }
 
-        // Sort records by receipt date (newest first)
+        // Sort records by receipt date (oldest first)
         displayedRecords.sort((a, b) => {
-            // Ordenar por data (mais recente primeiro)
+            // Ordenar por data (mais antigo primeiro)
             const dateA = a.receiptDate.split('-').join('');
             const dateB = b.receiptDate.split('-').join('');
-            return dateB.localeCompare(dateA);
+            return dateA.localeCompare(dateB);
         });
 
         if (displayedRecords.length === 0) {
