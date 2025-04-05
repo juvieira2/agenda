@@ -7,49 +7,51 @@ document.addEventListener('DOMContentLoaded', function() {
     const receiptDateInput = document.getElementById('receiptDate');
     const deliveryDateInput = document.getElementById('deliveryDate');
     const statusSelect = document.getElementById('status');
-    const submitBtn = document.getElementById('submitBtn');
-    const updateBtn = document.getElementById('updateBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
     const recordsList = document.getElementById('recordsList');
     const recordsTable = document.getElementById('recordsTable');
     const noRecordsMsg = document.getElementById('noRecordsMsg');
     const filterActiveCheckbox = document.getElementById('filterActive');
-    const recordDetails = document.getElementById('recordDetails');
-    const noRecordSelected = document.getElementById('noRecordSelected');
-    const editSelectedBtn = document.getElementById('editSelectedBtn');
-    const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
-
-    // Current editing record id
-    let currentEditId = null;
-    let selectedRecordId = null;
-
-    // Initialize records from localStorage
+    const recordDetailsModal = new bootstrap.Modal(document.getElementById('recordDetailsModal'));
+    const modalTitle = document.getElementById('recordDetailsModalLabel');
+    const modalBody = document.getElementById('recordDetailsBody');
+    const submitBtn = document.getElementById('submitBtn');
+    const updateBtn = document.getElementById('updateBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    
+    // Variables
     let records = JSON.parse(localStorage.getItem('maeRainhaRecords')) || [];
-
-    // Format date for display (DD/MM/YYYY)
+    let selectedRecordId = null;
+    let currentEditId = null;
+    
+    // Set today's date as default for receiptDate
+    const today = new Date();
+    receiptDateInput.value = formatDateForInput(today);
+    
+    // Format date for display
     function formatDate(dateString) {
-        if (!dateString) return '-';
-        // Corrigindo o problema de fuso horário
-        const [year, month, day] = dateString.split('-');
-        return `${day}/${month}/${year}`;
+        if (!dateString) return '';
+        
+        const date = new Date(dateString);
+        return date.toLocaleDateString('pt-BR');
     }
-
-    // Format date for input value (YYYY-MM-DD)
+    
+    // Format date for input value
     function formatDateForInput(dateString) {
         if (!dateString) return '';
-        // Corrigindo o problema de fuso horário
+        
         const date = new Date(dateString);
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
+        
         return `${year}-${month}-${day}`;
     }
-
+    
     // Generate unique ID
     function generateId() {
-        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        return Date.now().toString();
     }
-
+    
     // Validate host name (uppercase letters only)
     hostInput.addEventListener('input', function() {
         this.value = this.value.toUpperCase();
@@ -83,152 +85,188 @@ document.addEventListener('DOMContentLoaded', function() {
                     row.classList.add('table-active');
                 }
 
-                // Status badge class
-                const statusClass = record.status === 'Recebido' ? 'bg-success' : 'bg-warning';
-
+                const statusClass = record.status === 'Recebido' ? 'bg-success text-white' : 'bg-warning';
+                
                 row.innerHTML = `
                     <td>${record.host}</td>
                     <td>${record.apartment}</td>
                     <td>${record.block}</td>
+                    <td>${formatDate(record.receiptDate)}</td>
+                    <td>${formatDate(record.deliveryDate)}</td>
                     <td><span class="badge ${statusClass}">${record.status}</span></td>
                     <td>
-                        <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-secondary btn-view" data-id="${record.id}">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-outline-primary btn-edit" data-id="${record.id}">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-outline-danger btn-delete" data-id="${record.id}">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
+                        <button class="btn btn-sm btn-info view-btn" title="Visualizar"><i class="bi bi-eye"></i></button>
+                        <button class="btn btn-sm btn-primary edit-btn" title="Editar"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-danger delete-btn" title="Excluir"><i class="bi bi-trash"></i></button>
                     </td>
                 `;
+                
                 recordsList.appendChild(row);
             });
-
+            
             // Add event listeners to buttons
-            document.querySelectorAll('.btn-view').forEach(btn => {
+            document.querySelectorAll('.view-btn').forEach(btn => {
                 btn.addEventListener('click', viewRecord);
             });
-            document.querySelectorAll('.btn-edit').forEach(btn => {
+            
+            document.querySelectorAll('.edit-btn').forEach(btn => {
                 btn.addEventListener('click', editRecord);
             });
-            document.querySelectorAll('.btn-delete').forEach(btn => {
+            
+            document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', deleteRecord);
             });
+            
+            // Add click event to rows
             document.querySelectorAll('.record-row').forEach(row => {
                 row.addEventListener('click', function(e) {
                     if (!e.target.closest('button')) {
-                        // Only select row if we didn't click a button
                         selectRecord(this.dataset.id);
                     }
                 });
             });
         }
-
+        
         // Save to localStorage
         localStorage.setItem('maeRainhaRecords', JSON.stringify(records));
     }
-
-    // Select record for viewing details
+    
+    // Select a record
     function selectRecord(id) {
-        // Clear previous selection
-        document.querySelectorAll('.record-row').forEach(row => {
-            row.classList.remove('table-active');
-        });
-
-        // Set current selection
         selectedRecordId = id;
-        const selectedRow = document.querySelector(`.record-row[data-id="${id}"]`);
-        if (selectedRow) {
-            selectedRow.classList.add('table-active');
-        }
-
-        // Show details
+        document.querySelectorAll('.record-row').forEach(row => {
+            if (row.dataset.id === id) {
+                row.classList.add('table-active');
+            } else {
+                row.classList.remove('table-active');
+            }
+        });
+        
         showRecordDetails(id);
     }
-
-    // Show record details
+    
+    // Show record details in sidebar
     function showRecordDetails(id) {
         const record = records.find(r => r.id === id);
         if (record) {
-            document.getElementById('detail-host').textContent = record.host;
-            document.getElementById('detail-apartment').textContent = record.apartment;
-            document.getElementById('detail-block').textContent = record.block;
-            document.getElementById('detail-receiptDate').textContent = formatDate(record.receiptDate);
-            document.getElementById('detail-deliveryDate').textContent = formatDate(record.deliveryDate);
+            const detailsContainer = document.getElementById('recordDetails');
+            detailsContainer.innerHTML = `
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">Detalhes do registro</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Anfitrião:</strong> ${record.host}</p>
+                        <p><strong>Apartamento:</strong> ${record.apartment}</p>
+                        <p><strong>Bloco:</strong> ${record.block}</p>
+                        <p><strong>Data de Recebimento:</strong> ${formatDate(record.receiptDate)}</p>
+                        <p><strong>Data de Entrega:</strong> ${formatDate(record.deliveryDate)}</p>
+                        <p><strong>Status:</strong> <span class="badge ${record.status === 'Recebido' ? 'bg-success' : 'bg-warning'}">${record.status}</span></p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary edit-detail-btn" data-id="${record.id}">Editar</button>
+                        <button class="btn btn-danger delete-detail-btn" data-id="${record.id}">Excluir</button>
+                    </div>
+                </div>
+            `;
             
-            const statusBadge = document.getElementById('detail-status');
-            statusBadge.textContent = record.status;
-            statusBadge.className = 'badge ' + (record.status === 'Recebido' ? 'bg-success' : 'bg-warning');
+            // Add event listeners to detail buttons
+            document.querySelector('.edit-detail-btn').addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const record = records.find(r => r.id === id);
+                if (record) {
+                    populateFormForEdit(record);
+                }
+            });
             
-            recordDetails.classList.remove('d-none');
-            noRecordSelected.classList.add('d-none');
-        } else {
-            recordDetails.classList.add('d-none');
-            noRecordSelected.classList.remove('d-none');
+            document.querySelector('.delete-detail-btn').addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                if (confirm('Tem certeza que deseja excluir este registro?')) {
+                    records = records.filter(r => r.id !== id);
+                    displayRecords();
+                    document.getElementById('recordDetails').innerHTML = '';
+                    selectedRecordId = null;
+                }
+            });
+            
+            detailsContainer.classList.remove('d-none');
         }
     }
-
-    // View record details
+    
+    // View record in modal
     function viewRecord(e) {
-        const id = e.currentTarget.dataset.id;
-        selectRecord(id);
-    }
-
-    // Edit record
-    function editRecord(e) {
-        const id = e.currentTarget.dataset.id;
+        e.stopPropagation();
+        const id = e.target.closest('tr').dataset.id;
         const record = records.find(r => r.id === id);
         
         if (record) {
-            // Fill form with record data
-            hostInput.value = record.host;
-            apartmentInput.value = record.apartment;
-            blockSelect.value = record.block;
-            receiptDateInput.value = formatDateForInput(record.receiptDate);
-            deliveryDateInput.value = formatDateForInput(record.deliveryDate);
-            statusSelect.value = record.status;
+            modalTitle.textContent = `Registro de ${record.host}`;
+            modalBody.innerHTML = `
+                <p><strong>Anfitrião:</strong> ${record.host}</p>
+                <p><strong>Apartamento:</strong> ${record.apartment}</p>
+                <p><strong>Bloco:</strong> ${record.block}</p>
+                <p><strong>Data de Recebimento:</strong> ${formatDate(record.receiptDate)}</p>
+                <p><strong>Data de Entrega:</strong> ${formatDate(record.deliveryDate)}</p>
+                <p><strong>Status:</strong> <span class="badge ${record.status === 'Recebido' ? 'bg-success' : 'bg-warning'}">${record.status}</span></p>
+            `;
             
-            // Switch to edit mode
-            currentEditId = id;
-            submitBtn.classList.add('d-none');
-            updateBtn.classList.remove('d-none');
-            cancelBtn.classList.remove('d-none');
-            
-            // Scroll to form
-            imageForm.scrollIntoView({ behavior: 'smooth' });
+            recordDetailsModal.show();
         }
     }
-
+    
+    // Edit record
+    function editRecord(e) {
+        e.stopPropagation();
+        const id = e.target.closest('tr').dataset.id;
+        const record = records.find(r => r.id === id);
+        
+        if (record) {
+            populateFormForEdit(record);
+        }
+    }
+    
+    // Populate form for editing
+    function populateFormForEdit(record) {
+        currentEditId = record.id;
+        hostInput.value = record.host;
+        apartmentInput.value = record.apartment;
+        blockSelect.value = record.block;
+        receiptDateInput.value = record.receiptDate;
+        deliveryDateInput.value = record.deliveryDate;
+        statusSelect.value = record.status;
+        
+        submitBtn.classList.add('d-none');
+        updateBtn.classList.remove('d-none');
+        cancelBtn.classList.remove('d-none');
+        
+        // Scroll to form
+        imageForm.scrollIntoView({ behavior: 'smooth' });
+    }
+    
     // Delete record
     function deleteRecord(e) {
-        const id = e.currentTarget.dataset.id;
+        e.stopPropagation();
+        const id = e.target.closest('tr').dataset.id;
         
         if (confirm('Tem certeza que deseja excluir este registro?')) {
             records = records.filter(record => record.id !== id);
             
-            // If we're deleting the selected record, clear the selection
             if (selectedRecordId === id) {
                 selectedRecordId = null;
-                recordDetails.classList.add('d-none');
-                noRecordSelected.classList.remove('d-none');
-            }
-            
-            // If we're deleting the record being edited, reset the form
-            if (currentEditId === id) {
-                resetForm();
+                document.getElementById('recordDetails').innerHTML = '';
             }
             
             displayRecords();
         }
     }
-
-    // Reset form to add mode
+    
+    // Reset form
     function resetForm() {
         imageForm.reset();
+        
+        // Set today's date as default for receiptDate
+        receiptDateInput.value = formatDateForInput(new Date());
+        
         currentEditId = null;
         submitBtn.classList.remove('d-none');
         updateBtn.classList.add('d-none');
@@ -245,15 +283,34 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('O nome do anfitrião deve conter apenas letras maiúsculas.');
             return;
         }
+
+        // Get current form values
+        const receiptDate = receiptDateInput.value;
+        const deliveryDate = deliveryDateInput.value;
+        const status = statusSelect.value;
+        
+        // Verificar se já existe um registro com a mesma data de recebimento
+        const dateExists = records.some(record => {
+            // Ignora o registro atual durante a edição
+            if (currentEditId && record.id === currentEditId) {
+                return false;
+            }
+            return record.receiptDate === receiptDate;
+        });
+        
+        if (dateExists) {
+            alert('Não é possível cadastrar mais de uma pessoa recebendo a imagem na mesma data.');
+            return;
+        }
         
         // Create new record
         const newRecord = {
             host: hostInput.value,
             apartment: apartmentInput.value,
             block: blockSelect.value,
-            receiptDate: receiptDateInput.value,
-            deliveryDate: deliveryDateInput.value,
-            status: statusSelect.value
+            receiptDate: receiptDate,
+            deliveryDate: deliveryDate,
+            status: status
         };
         
         // Add or update record
@@ -278,46 +335,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Update button click handler
     updateBtn.addEventListener('click', function() {
         // Trigger form submission
-        const submitEvent = new Event('submit', { cancelable: true });
-        imageForm.dispatchEvent(submitEvent);
+        imageForm.dispatchEvent(new Event('submit'));
     });
-
+    
     // Cancel button click handler
-    cancelBtn.addEventListener('click', resetForm);
-
-    // Edit selected record button
-    editSelectedBtn.addEventListener('click', function() {
-        if (selectedRecordId) {
-            // Trigger edit action
-            const editButton = document.querySelector(`.btn-edit[data-id="${selectedRecordId}"]`);
-            if (editButton) {
-                editButton.click();
-            }
-        }
+    cancelBtn.addEventListener('click', function() {
+        resetForm();
     });
-
-    // Delete selected record button
-    deleteSelectedBtn.addEventListener('click', function() {
-        if (selectedRecordId) {
-            // Trigger delete action
-            const deleteButton = document.querySelector(`.btn-delete[data-id="${selectedRecordId}"]`);
-            if (deleteButton) {
-                deleteButton.click();
-            }
-        }
-    });
-
-    // Filter active records checkbox
+    
+    // Filter checkbox change handler
     filterActiveCheckbox.addEventListener('change', displayRecords);
-
-    // Set today's date as default for receipt date
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const todayFormatted = `${year}-${month}-${day}`;
-    receiptDateInput.value = todayFormatted;
-
+    
     // Initial display
     displayRecords();
 });
