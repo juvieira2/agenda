@@ -30,15 +30,25 @@ document.addEventListener('DOMContentLoaded', function() {
     function formatDate(dateString) {
         if (!dateString) return '';
         
-        const date = new Date(dateString);
-        return date.toLocaleDateString('pt-BR');
+        // Garantir que a data não seja afetada pelo fuso horário
+        const parts = dateString.split('-');
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
     
     // Format date for input value
     function formatDateForInput(dateString) {
         if (!dateString) return '';
         
-        const date = new Date(dateString);
+        let date;
+        if (dateString instanceof Date) {
+            date = dateString;
+        } else {
+            // Parsing sem conversão de fuso horário
+            const parts = dateString.split('-');
+            if (parts.length < 3) return '';
+            date = new Date(parts[0], parts[1] - 1, parts[2]);
+        }
+        
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
@@ -65,7 +75,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Sort records by receipt date (newest first)
-        displayedRecords.sort((a, b) => new Date(b.receiptDate) - new Date(a.receiptDate));
+        displayedRecords.sort((a, b) => {
+            // Ordenar por data (mais recente primeiro)
+            const dateA = a.receiptDate.split('-').join('');
+            const dateB = b.receiptDate.split('-').join('');
+            return dateB.localeCompare(dateA);
+        });
 
         if (displayedRecords.length === 0) {
             recordsTable.classList.add('d-none');
@@ -154,7 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('detail-apartment').textContent = record.apartment;
             document.getElementById('detail-block').textContent = record.block;
             document.getElementById('detail-receiptDate').textContent = formatDate(record.receiptDate);
-            document.getElementById('detail-deliveryDate').textContent = formatDate(record.deliveryDate) || '-';
+            document.getElementById('detail-deliveryDate').textContent = record.deliveryDate ? formatDate(record.deliveryDate) : '-';
             
             const statusElement = document.getElementById('detail-status');
             statusElement.textContent = record.status;
