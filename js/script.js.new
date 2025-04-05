@@ -303,28 +303,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return record.receiptDate === receiptDate;
         });
         
-        if (dateExists) {
-            // Criar um elemento para a mensagem de erro
-            const errorMessage = document.createElement('div');
-            errorMessage.className = 'alert alert-danger alert-dismissible fade show mt-3';
-            errorMessage.role = 'alert';
-            errorMessage.innerHTML = `
-                <strong>Erro:</strong> Não é possível cadastrar mais de uma pessoa recebendo a imagem na mesma data.
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-            `;
-            
-            // Inserir a mensagem no início do formulário
-            imageForm.prepend(errorMessage);
-            
-            // Rolar para o topo do formulário para ver a mensagem
-            imageForm.scrollIntoView({ behavior: 'smooth' });
-            
-            // Remover a mensagem após 5 segundos
-            setTimeout(() => {
-                errorMessage.remove();
-            }, 5000);
-            
-            return;
+if (dateExists) {            // Criar um elemento para a mensagem de erro            const errorMessage = document.createElement("div");            errorMessage.className = "alert alert-danger alert-dismissible fade show mt-3";            errorMessage.role = "alert";            errorMessage.innerHTML = `                <strong>Erro:</strong> Não é possível cadastrar mais de uma pessoa recebendo a imagem na mesma data.                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>            `;                        // Inserir a mensagem no início do formulário            imageForm.prepend(errorMessage);                        // Rolar para o topo do formulário para ver a mensagem            imageForm.scrollIntoView({ behavior: "smooth" });                        // Remover a mensagem após 5 segundos            setTimeout(() => {                errorMessage.remove();            }, 5000);                        return;        }
         }
         
         // Create new record
@@ -373,3 +352,4 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial display
     displayRecords();
 });
+mv js/script.js.new js/script.js
