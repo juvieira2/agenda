@@ -11,9 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const recordsTable = document.getElementById('recordsTable');
     const noRecordsMsg = document.getElementById('noRecordsMsg');
     const filterActiveCheckbox = document.getElementById('filterActive');
-    const recordDetailsModal = new bootstrap.Modal(document.getElementById('recordDetailsModal'));
-    const modalTitle = document.getElementById('recordDetailsModalLabel');
-    const modalBody = document.getElementById('recordDetailsBody');
+    const editSelectedBtn = document.getElementById('editSelectedBtn');
+    const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
     const submitBtn = document.getElementById('submitBtn');
     const updateBtn = document.getElementById('updateBtn');
     const cancelBtn = document.getElementById('cancelBtn');
@@ -91,13 +90,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td>${record.host}</td>
                     <td>${record.apartment}</td>
                     <td>${record.block}</td>
-                    <td>${formatDate(record.receiptDate)}</td>
-                    <td>${formatDate(record.deliveryDate)}</td>
                     <td><span class="badge ${statusClass}">${record.status}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-info view-btn" title="Visualizar"><i class="bi bi-eye"></i></button>
-                        <button class="btn btn-sm btn-primary edit-btn" title="Editar"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-sm btn-danger delete-btn" title="Excluir"><i class="bi bi-trash"></i></button>
+                        <button class="btn btn-sm btn-info view-btn" title="Visualizar"><i class="fas fa-eye"></i></button>
+                        <button class="btn btn-sm btn-primary edit-btn" title="Editar"><i class="fas fa-pencil"></i></button>
+                        <button class="btn btn-sm btn-danger delete-btn" title="Excluir"><i class="fas fa-trash"></i></button>
                     </td>
                 `;
                 
@@ -150,68 +147,55 @@ document.addEventListener('DOMContentLoaded', function() {
         const record = records.find(r => r.id === id);
         if (record) {
             const detailsContainer = document.getElementById('recordDetails');
-            detailsContainer.innerHTML = `
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h5 class="mb-0">Detalhes do registro</h5>
-                    </div>
-                    <div class="card-body">
-                        <p><strong>Anfitrião:</strong> ${record.host}</p>
-                        <p><strong>Apartamento:</strong> ${record.apartment}</p>
-                        <p><strong>Bloco:</strong> ${record.block}</p>
-                        <p><strong>Data de Recebimento:</strong> ${formatDate(record.receiptDate)}</p>
-                        <p><strong>Data de Entrega:</strong> ${formatDate(record.deliveryDate)}</p>
-                        <p><strong>Status:</strong> <span class="badge ${record.status === 'Recebido' ? 'bg-success' : 'bg-warning'}">${record.status}</span></p>
-                    </div>
-                    <div class="card-footer">
-                        <button class="btn btn-primary edit-detail-btn" data-id="${record.id}">Editar</button>
-                        <button class="btn btn-danger delete-detail-btn" data-id="${record.id}">Excluir</button>
-                    </div>
-                </div>
-            `;
+            const noRecordSelected = document.getElementById('noRecordSelected');
             
-            // Add event listeners to detail buttons
-            document.querySelector('.edit-detail-btn').addEventListener('click', function() {
-                const id = this.getAttribute('data-id');
-                const record = records.find(r => r.id === id);
-                if (record) {
-                    populateFormForEdit(record);
+            // Update details
+            document.getElementById('detail-host').textContent = record.host;
+            document.getElementById('detail-apartment').textContent = record.apartment;
+            document.getElementById('detail-block').textContent = record.block;
+            document.getElementById('detail-receiptDate').textContent = formatDate(record.receiptDate);
+            document.getElementById('detail-deliveryDate').textContent = formatDate(record.deliveryDate) || '-';
+            
+            const statusElement = document.getElementById('detail-status');
+            statusElement.textContent = record.status;
+            statusElement.className = `badge ${record.status === 'Recebido' ? 'bg-success' : 'bg-warning'}`;
+            
+            // Show details and hide no selection message
+            detailsContainer.classList.remove('d-none');
+            noRecordSelected.classList.add('d-none');
+            
+            // Set up edit and delete buttons
+            editSelectedBtn.setAttribute('data-id', record.id);
+            deleteSelectedBtn.setAttribute('data-id', record.id);
+            
+            editSelectedBtn.addEventListener('click', function() {
+                const recordId = this.getAttribute('data-id');
+                const recordToEdit = records.find(r => r.id === recordId);
+                if (recordToEdit) {
+                    populateFormForEdit(recordToEdit);
                 }
             });
             
-            document.querySelector('.delete-detail-btn').addEventListener('click', function() {
-                const id = this.getAttribute('data-id');
+            deleteSelectedBtn.addEventListener('click', function() {
+                const recordId = this.getAttribute('data-id');
                 if (confirm('Tem certeza que deseja excluir este registro?')) {
-                    records = records.filter(r => r.id !== id);
+                    records = records.filter(r => r.id !== recordId);
                     displayRecords();
-                    document.getElementById('recordDetails').innerHTML = '';
+                    
+                    // Hide details and show no selection message
+                    detailsContainer.classList.add('d-none');
+                    noRecordSelected.classList.remove('d-none');
                     selectedRecordId = null;
                 }
             });
-            
-            detailsContainer.classList.remove('d-none');
         }
     }
     
-    // View record in modal
+    // View record details
     function viewRecord(e) {
         e.stopPropagation();
         const id = e.target.closest('tr').dataset.id;
-        const record = records.find(r => r.id === id);
-        
-        if (record) {
-            modalTitle.textContent = `Registro de ${record.host}`;
-            modalBody.innerHTML = `
-                <p><strong>Anfitrião:</strong> ${record.host}</p>
-                <p><strong>Apartamento:</strong> ${record.apartment}</p>
-                <p><strong>Bloco:</strong> ${record.block}</p>
-                <p><strong>Data de Recebimento:</strong> ${formatDate(record.receiptDate)}</p>
-                <p><strong>Data de Entrega:</strong> ${formatDate(record.deliveryDate)}</p>
-                <p><strong>Status:</strong> <span class="badge ${record.status === 'Recebido' ? 'bg-success' : 'bg-warning'}">${record.status}</span></p>
-            `;
-            
-            recordDetailsModal.show();
-        }
+        selectRecord(id);
     }
     
     // Edit record
@@ -232,7 +216,7 @@ document.addEventListener('DOMContentLoaded', function() {
         apartmentInput.value = record.apartment;
         blockSelect.value = record.block;
         receiptDateInput.value = record.receiptDate;
-        deliveryDateInput.value = record.deliveryDate;
+        deliveryDateInput.value = record.deliveryDate || '';
         statusSelect.value = record.status;
         
         submitBtn.classList.add('d-none');
@@ -253,7 +237,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (selectedRecordId === id) {
                 selectedRecordId = null;
-                document.getElementById('recordDetails').innerHTML = '';
+                const detailsContainer = document.getElementById('recordDetails');
+                const noRecordSelected = document.getElementById('noRecordSelected');
+                detailsContainer.classList.add('d-none');
+                noRecordSelected.classList.remove('d-none');
             }
             
             displayRecords();
