@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const submitBtn = document.getElementById('submitBtn');
     const updateBtn = document.getElementById('updateBtn');
     const cancelBtn = document.getElementById('cancelBtn');
-    const shareQRBtn = document.getElementById('shareQRBtn');
+    // Removed QR code button reference
     
     // Variables
     let records = JSON.parse(localStorage.getItem('maeRainhaRecords')) || [];
@@ -158,43 +158,6 @@ document.addEventListener('DOMContentLoaded', function() {
         showRecordDetails(id);
     }
     
-    // Generate QR code for a record
-    function generateQRCode(record) {
-    function generateQRCode(record) {
-        const qrcodeContainer = document.getElementById('qrcode-container');
-        qrcodeContainer.innerHTML = '';
-        
-        // Criar dados para o QR code (formato texto)
-        const qrText = `Anfitrião: ${record.host}
-Apartamento: ${record.apartment}
-Bloco: ${record.block}
-Recebimento: ${formatDate(record.receiptDate)}
-Entrega: ${record.deliveryDate ? formatDate(record.deliveryDate) : 'Pendente'}
-Status: ${record.status}`;
-        
-        // Método simples para gerar QR code
-        try {
-            new QRCode(qrcodeContainer, {
-                text: qrText,
-                width: 180,
-                height: 180,
-                colorDark: '#212529',
-                colorLight: '#ffffff'
-            });
-        } catch (e) {
-            console.log('Erro na geração do QR code:', e);
-            qrcodeContainer.innerHTML = `
-                <div class="alert alert-info">
-                    <small>Informações do registro:</small>
-                    <hr>
-                    <p><strong>Anfitrião:</strong> ${record.host}</p>
-                    <p><strong>Apartamento:</strong> ${record.apartment} - Bloco ${record.block}</p>
-                    <p><strong>Recebimento:</strong> ${formatDate(record.receiptDate)}</p>
-                </div>
-            `;
-        }
-    }
-    }
     
     // Show record details in sidebar
     function showRecordDetails(id) {
@@ -214,8 +177,6 @@ Status: ${record.status}`;
             statusElement.textContent = record.status;
             statusElement.className = `badge ${record.status === 'Recebido' ? 'bg-success' : 'bg-warning'}`;
             
-            // Generate QR code for this record
-            generateQRCode(record);
             
             // Show details and hide no selection message
             detailsContainer.classList.remove('d-none');
