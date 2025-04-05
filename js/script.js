@@ -29,15 +29,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // Format date for display (DD/MM/YYYY)
     function formatDate(dateString) {
         if (!dateString) return '-';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('pt-BR');
+        // Corrigindo o problema de fuso horário
+        const [year, month, day] = dateString.split('-');
+        return `${day}/${month}/${year}`;
     }
 
     // Format date for input value (YYYY-MM-DD)
     function formatDateForInput(dateString) {
         if (!dateString) return '';
+        // Corrigindo o problema de fuso horário
         const date = new Date(dateString);
-        return date.toISOString().split('T')[0];
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     }
 
     // Generate unique ID
@@ -306,8 +311,12 @@ document.addEventListener('DOMContentLoaded', function() {
     filterActiveCheckbox.addEventListener('change', displayRecords);
 
     // Set today's date as default for receipt date
-    const today = new Date().toISOString().split('T')[0];
-    receiptDateInput.value = today;
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const todayFormatted = `${year}-${month}-${day}`;
+    receiptDateInput.value = todayFormatted;
 
     // Initial display
     displayRecords();
