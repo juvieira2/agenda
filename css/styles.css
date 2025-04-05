@@ -1,0 +1,46 @@
+/* Custom styles for Mãe Rainha Image Tracker */
+
+/* Make record rows clickable */
+.record-row {
+    cursor: pointer;
+}
+
+/* Ensure proper spacing between form elements */
+.form-label {
+    margin-bottom: 0.25rem;
+}
+
+/* Icon container styling */
+.icon-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Add some breathing room to details section */
+#recordDetails dl {
+    margin-bottom: 1.5rem;
+}
+
+/* Style for active record */
+.table-active {
+    --bs-table-accent-bg: var(--bs-primary-bg-subtle);
+}
+
+/* Ensure badges stand out properly on dark theme */
+.badge.bg-success {
+    background-color: var(--bs-success) !important;
+    color: var(--bs-white);
+}
+
+.badge.bg-warning {
+    background-color: var(--bs-warning) !important;
+    color: var(--bs-dark);
+}
+
+/* Add some spacing for mobile views */
+@media (max-width: 767.98px) {
+    .card {
+        margin-bottom: 1.5rem;
+    }
+}
