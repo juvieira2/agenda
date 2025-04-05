@@ -163,59 +163,36 @@ document.addEventListener('DOMContentLoaded', function() {
         const qrcodeContainer = document.getElementById('qrcode-container');
         qrcodeContainer.innerHTML = '';
         
-        // Criar dados para o QR code (formato JSON)
-        const qrData = {
-            id: record.id,
-            host: record.host,
-            apartment: record.apartment,
-            block: record.block,
-            receiptDate: record.receiptDate,
-            deliveryDate: record.deliveryDate || '',
-            status: record.status
-        };
+        // Criar dados para o QR code (formato texto)
+        const qrText = `Anfitrião: ${record.host}
+Apartamento: ${record.apartment}
+Bloco: ${record.block}
+Recebimento: ${formatDate(record.receiptDate)}
+Entrega: ${record.deliveryDate ? formatDate(record.deliveryDate) : 'Pendente'}
+Status: ${record.status}`;
         
-        // Gerar QR code
-        QRCode.toCanvas(qrcodeContainer, JSON.stringify(qrData), {
-            width: 180,
-            margin: 1,
-            color: {
-                dark: '#212529',  // Cor do QR code
-                light: '#ffffff'  // Fundo do QR code
-            }
-        }, function(error) {
-            if (error) {
-                console.error('Erro ao gerar QR code:', error);
-                qrcodeContainer.innerHTML = '<p class="text-danger">Erro ao gerar QR code</p>';
-            }
-        });
-        
-        // Configurar botão de compartilhamento
-        const shareQRBtn = document.getElementById('shareQRBtn');
-        if (shareQRBtn) {
-            shareQRBtn.onclick = function() {
-                shareQRCode(record);
-            };
+        // Abordagem direta usando o construtor QRCode
+        try {
+            new QRCode(qrcodeContainer, {
+                text: qrText,
+                width: 180,
+                height: 180,
+                colorDark: '#212529',
+                colorLight: '#ffffff'
+            });
+        } catch (e) {
+            console.log('Erro na geração do QR code:', e);
+            // Em caso de erro, cria uma alternativa simples
+            qrcodeContainer.innerHTML = `
+                <div class="alert alert-info">
+                    <small>Informações do registro:</small>
+                    <hr>
+                    <p><strong>Anfitrião:</strong> ${record.host}</p>
+                    <p><strong>Apartamento:</strong> ${record.apartment} - Bloco ${record.block}</p>
+                    <p><strong>Recebimento:</strong> ${formatDate(record.receiptDate)}</p>
+                </div>
+            `;
         }
-    }
-    
-    // Compartilhar QR code
-    function shareQRCode(record) {
-        const canvas = document.querySelector('#qrcode-container canvas');
-        if (!canvas) return;
-        
-        // Converter canvas para imagem base64
-        const imageData = canvas.toDataURL('image/png');
-        
-        // Criar texto de compartilhamento
-        const shareText = `Informações da Imagem Mãe Rainha:\n` +
-                         `Anfitrião: ${record.host}\n` +
-                         `Apartamento: ${record.apartment}\n` + 
-                         `Bloco: ${record.block}\n` +
-                         `Data de Recebimento: ${formatDate(record.receiptDate)}\n` +
-                         `Status: ${record.status}`;
-        
-        // Verificar se a API de compartilhamento está disponível
-        if (navigator.share) {
             // Converter base64 para blob para compartilhamento
             fetch(imageData)
                 .then(res => res.blob())
