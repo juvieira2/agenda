@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     row.classList.add('table-active');
                 }
 
-                const statusClass = record.status === 'Recebido' ? 'bg-success text-white' : 'bg-warning';
+                const statusClass = record.status === 'Recebido' ? 'bg-primary text-white' : 'bg-warning';
                 
                 row.innerHTML = `
                     <td>${record.host}</td>
@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const statusElement = document.getElementById('detail-status');
             statusElement.textContent = record.status;
-            statusElement.className = `badge ${record.status === 'Recebido' ? 'bg-success' : 'bg-warning'}`;
+            statusElement.className = `badge ${record.status === 'Recebido' ? 'bg-primary' : 'bg-warning'}`;
             
             
             // Show details and hide no selection message
