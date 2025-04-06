@@ -16,72 +16,52 @@ document.addEventListener('DOMContentLoaded', function() {
     const submitBtn = document.getElementById('submitBtn');
     const updateBtn = document.getElementById('updateBtn');
     const cancelBtn = document.getElementById('cancelBtn');
-    // Removed QR code button reference
-    
-    // Variables
-    let records = JSON.parse(localStorage.getItem('maeRainhaRecords')) || [];
+
+    let records = [];
     let selectedRecordId = null;
     let currentEditId = null;
-    
+
     // Set today's date as default for receiptDate
     const today = new Date();
     receiptDateInput.value = formatDateForInput(today);
-    
+
     // Format date for display
     function formatDate(dateString) {
         if (!dateString) return '';
-        
-        // Garantir que a data não seja afetada pelo fuso horário
-        const parts = dateString.split('-');
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        const date = new Date(dateString);
+        return date.toLocaleDateString('pt-BR');
     }
-    
+
     // Format date for input value
     function formatDateForInput(dateString) {
         if (!dateString) return '';
-        
-        let date;
-        if (dateString instanceof Date) {
-            date = dateString;
-        } else {
-            // Parsing sem conversão de fuso horário
-            const parts = dateString.split('-');
-            if (parts.length < 3) return '';
-            date = new Date(parts[0], parts[1] - 1, parts[2]);
-        }
-        
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        
-        return `${year}-${month}-${day}`;
+        const date = new Date(dateString);
+        return date.toISOString().split('T')[0];
     }
-    
-    // Generate unique ID
-    function generateId() {
-        return Date.now().toString();
-    }
-    
+
     // Validate host name (uppercase letters only)
     hostInput.addEventListener('input', function() {
         this.value = this.value.toUpperCase();
     });
 
+    // Load records from server
+    async function loadRecords() {
+        try {
+            const response = await fetch('/api/records');
+            records = await response.json();
+            displayRecords();
+        } catch (error) {
+            console.error('Error loading records:', error);
+            alert('Erro ao carregar registros');
+        }
+    }
+
     // Display records
     function displayRecords() {
-        // Filter records if the checkbox is checked
         let displayedRecords = records;
         if (filterActiveCheckbox.checked) {
             displayedRecords = records.filter(record => record.status === 'Recebido');
         }
-
-        // Sort records by receipt date (newest first)
-        displayedRecords.sort((a, b) => {
-            // Ordenar por data (mais recente primeiro)
-            const dateA = a.receiptDate.split('-').join('');
-            const dateB = b.receiptDate.split('-').join('');
-            return dateB.localeCompare(dateA);
-        });
 
         if (displayedRecords.length === 0) {
             recordsTable.classList.add('d-none');
@@ -95,13 +75,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 const row = document.createElement('tr');
                 row.dataset.id = record.id;
                 row.classList.add('record-row');
-                
+
                 if (record.id === selectedRecordId) {
                     row.classList.add('table-active');
                 }
 
                 const statusClass = record.status === 'Recebido' ? 'bg-primary text-white' : 'bg-warning';
-                
+
                 row.innerHTML = `
                     <td>${record.host}</td>
                     <td>${record.apartment}</td>
@@ -113,79 +93,70 @@ document.addEventListener('DOMContentLoaded', function() {
                         <button class="btn btn-sm btn-danger delete-btn" title="Excluir"><i class="fas fa-trash"></i></button>
                     </td>
                 `;
-                
+
                 recordsList.appendChild(row);
             });
-            
+
             // Add event listeners to buttons
             document.querySelectorAll('.view-btn').forEach(btn => {
                 btn.addEventListener('click', viewRecord);
             });
-            
+
             document.querySelectorAll('.edit-btn').forEach(btn => {
                 btn.addEventListener('click', editRecord);
             });
-            
+
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', deleteRecord);
             });
-            
-            // Add click event to rows
+
             document.querySelectorAll('.record-row').forEach(row => {
                 row.addEventListener('click', function(e) {
                     if (!e.target.closest('button')) {
-                        selectRecord(this.dataset.id);
+                        selectRecord(parseInt(this.dataset.id));
                     }
                 });
             });
         }
-        
-        // Save to localStorage
-        localStorage.setItem('maeRainhaRecords', JSON.stringify(records));
     }
-    
+
     // Select a record
     function selectRecord(id) {
         selectedRecordId = id;
         document.querySelectorAll('.record-row').forEach(row => {
-            if (row.dataset.id === id) {
+            if (parseInt(row.dataset.id) === id) {
                 row.classList.add('table-active');
             } else {
                 row.classList.remove('table-active');
             }
         });
-        
+
         showRecordDetails(id);
     }
-    
-    
-    // Show record details in sidebar
+
+    // Show record details
     function showRecordDetails(id) {
         const record = records.find(r => r.id === id);
         if (record) {
             const detailsContainer = document.getElementById('recordDetails');
             const noRecordSelected = document.getElementById('noRecordSelected');
-            
-            // Update details
+
             document.getElementById('detail-host').textContent = record.host;
             document.getElementById('detail-apartment').textContent = record.apartment;
             document.getElementById('detail-block').textContent = record.block;
-            document.getElementById('detail-receiptDate').textContent = formatDate(record.receiptDate);
-            document.getElementById('detail-deliveryDate').textContent = record.deliveryDate ? formatDate(record.deliveryDate) : '-';
-            
+            document.getElementById('detail-receiptDate').textContent = formatDate(record.receipt_date);
+            document.getElementById('detail-deliveryDate').textContent = record.delivery_date ? formatDate(record.delivery_date) : '-';
+
             const statusElement = document.getElementById('detail-status');
             statusElement.textContent = record.status;
             statusElement.className = `badge ${record.status === 'Recebido' ? 'bg-primary' : 'bg-warning'}`;
-            
-            
-            // Show details and hide no selection message
+
             detailsContainer.classList.remove('d-none');
             noRecordSelected.classList.add('d-none');
-            
-            // Set up edit and delete buttons
+
             editSelectedBtn.setAttribute('data-id', record.id);
             deleteSelectedBtn.setAttribute('data-id', record.id);
-            
+
             editSelectedBtn.addEventListener('click', function() {
                 const recordId = this.getAttribute('data-id');
                 const recordToEdit = records.find(r => r.id === recordId);
@@ -193,85 +164,82 @@ document.addEventListener('DOMContentLoaded', function() {
                     populateFormForEdit(recordToEdit);
                 }
             });
-            
+
             deleteSelectedBtn.addEventListener('click', function() {
                 const recordId = this.getAttribute('data-id');
                 if (confirm('Tem certeza que deseja excluir este registro?')) {
-                    records = records.filter(r => r.id !== recordId);
-                    displayRecords();
-                    
-                    // Hide details and show no selection message
-                    detailsContainer.classList.add('d-none');
-                    noRecordSelected.classList.remove('d-none');
-                    selectedRecordId = null;
+                    deleteRecord(recordId);
                 }
             });
         }
     }
-    
-    // View record details
+
+    // View record
     function viewRecord(e) {
         e.stopPropagation();
-        const id = e.target.closest('tr').dataset.id;
+        const id = parseInt(e.target.closest('tr').dataset.id);
         selectRecord(id);
     }
-    
+
     // Edit record
     function editRecord(e) {
         e.stopPropagation();
-        const id = e.target.closest('tr').dataset.id;
+        const id = parseInt(e.target.closest('tr').dataset.id);
         const record = records.find(r => r.id === id);
-        
+
         if (record) {
             populateFormForEdit(record);
         }
     }
-    
+
     // Populate form for editing
     function populateFormForEdit(record) {
         currentEditId = record.id;
         hostInput.value = record.host;
         apartmentInput.value = record.apartment;
         blockSelect.value = record.block;
-        receiptDateInput.value = record.receiptDate;
-        deliveryDateInput.value = record.deliveryDate || '';
+        receiptDateInput.value = formatDateForInput(record.receipt_date);
+        deliveryDateInput.value = record.delivery_date ? formatDateForInput(record.delivery_date) : '';
         statusSelect.value = record.status;
-        
+
         submitBtn.classList.add('d-none');
         updateBtn.classList.remove('d-none');
         cancelBtn.classList.remove('d-none');
-        
-        // Scroll to form
+
         imageForm.scrollIntoView({ behavior: 'smooth' });
     }
-    
+
     // Delete record
-    function deleteRecord(e) {
-        e.stopPropagation();
-        const id = e.target.closest('tr').dataset.id;
-        
+    async function deleteRecord(id) {
         if (confirm('Tem certeza que deseja excluir este registro?')) {
-            records = records.filter(record => record.id !== id);
-            
-            if (selectedRecordId === id) {
-                selectedRecordId = null;
-                const detailsContainer = document.getElementById('recordDetails');
-                const noRecordSelected = document.getElementById('noRecordSelected');
-                detailsContainer.classList.add('d-none');
-                noRecordSelected.classList.remove('d-none');
+            try {
+                const response = await fetch(`/api/records/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    if (selectedRecordId === id) {
+                        selectedRecordId = null;
+                        const detailsContainer = document.getElementById('recordDetails');
+                        const noRecordSelected = document.getElementById('noRecordSelected');
+                        detailsContainer.classList.add('d-none');
+                        noRecordSelected.classList.remove('d-none');
+                    }
+                    await loadRecords();
+                } else {
+                    alert('Erro ao excluir registro');
+                }
+            } catch (error) {
+                console.error('Error deleting record:', error);
+                alert('Erro ao excluir registro');
             }
-            
-            displayRecords();
         }
     }
-    
+
     // Reset form
     function resetForm() {
         imageForm.reset();
-        
-        // Set today's date as default for receiptDate
         receiptDateInput.value = formatDateForInput(new Date());
-        
         currentEditId = null;
         submitBtn.classList.remove('d-none');
         updateBtn.classList.add('d-none');
@@ -279,97 +247,66 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Form submit handler
-    imageForm.addEventListener('submit', function(e) {
+    imageForm.addEventListener('submit', async function(e) {
         e.preventDefault();
-        
-        // Validate host name (uppercase letters only)
+
         const hostValue = hostInput.value;
         if (!/^[A-Z\s]+$/.test(hostValue)) {
             alert('O nome do anfitrião deve conter apenas letras maiúsculas.');
             return;
         }
 
-        // Get current form values
-        const receiptDate = receiptDateInput.value;
-        const deliveryDate = deliveryDateInput.value;
-        const status = statusSelect.value;
-        
-        // Verificar se já existe um registro com a mesma data de recebimento
-        const dateExists = records.some(record => {
-            // Ignora o registro atual durante a edição
-            if (currentEditId && record.id === currentEditId) {
-                return false;
-            }
-            return record.receiptDate === receiptDate;
-        });
-        
-        if (dateExists) {
-            // Criar um elemento para a mensagem de erro
-            const errorMessage = document.createElement('div');
-            errorMessage.className = 'alert alert-danger alert-dismissible fade show mt-3';
-            errorMessage.role = 'alert';
-            errorMessage.innerHTML = `
-                <strong>Erro:</strong> Não é possível cadastrar mais de uma pessoa recebendo a imagem na mesma data.
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-            `;
-            
-            // Inserir a mensagem no início do formulário
-            imageForm.prepend(errorMessage);
-            
-            // Rolar para o topo do formulário para ver a mensagem
-            imageForm.scrollIntoView({ behavior: 'smooth' });
-            
-            // Remover a mensagem após 5 segundos
-            setTimeout(() => {
-                errorMessage.remove();
-            }, 5000);
-            
-            return;
-        }
-        
-        // Create new record
-        const newRecord = {
+        const formData = {
             host: hostInput.value,
             apartment: apartmentInput.value,
             block: blockSelect.value,
-            receiptDate: receiptDate,
-            deliveryDate: deliveryDate,
-            status: status
+            receipt_date: receiptDateInput.value,
+            delivery_date: deliveryDateInput.value,
+            status: statusSelect.value
         };
-        
-        // Add or update record
-        if (currentEditId) {
-            // Update existing record
-            const index = records.findIndex(record => record.id === currentEditId);
-            if (index !== -1) {
-                newRecord.id = currentEditId;
-                records[index] = newRecord;
+
+        try {
+            let response;
+            if (currentEditId) {
+                response = await fetch(`/api/records/${currentEditId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+            } else {
+                response = await fetch('/api/records', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
             }
-        } else {
-            // Add new record
-            newRecord.id = generateId();
-            records.push(newRecord);
+
+            if (response.ok) {
+                resetForm();
+                await loadRecords();
+            } else {
+                alert('Erro ao salvar registro');
+            }
+        } catch (error) {
+            console.error('Error saving record:', error);
+            alert('Erro ao salvar registro');
         }
-        
-        // Reset form and update display
-        resetForm();
-        displayRecords();
     });
 
-    // Update button click handler
     updateBtn.addEventListener('click', function() {
-        // Trigger form submission
         imageForm.dispatchEvent(new Event('submit'));
     });
-    
-    // Cancel button click handler
+
     cancelBtn.addEventListener('click', function() {
         resetForm();
     });
-    
-    // Filter checkbox change handler
+
     filterActiveCheckbox.addEventListener('change', displayRecords);
-    
-    // Initial display
-    displayRecords();
+
+    // Initial load
+    loadRecords();
 });
